@@ -1,55 +1,52 @@
 const express = require('express');
 const app = express();
-const episodes = require('./episodes')
+const helmet = require('helmet');
+const bodyParser = require('body-parser');
+const path = require('path');
+const router = express.Router();
+const episode = require('./router/episode');
+const character = require('./router/character');
+const middleRouter = [episode, character];
 
-app.use(express.static('public'))
+app.use(bodyParser.json()); // => for JSON data analyis
+app.use(helmet());// => for safety
+for (let i = 0; i < middleRouter.length; i++) {
+  app.use('/', middleRouter[i]);
+}
+app.use(bodyParser.urlencoded({ extended: true })); // => for form data analyis
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-})
-
-//returns just episode id
-app.get('/api/v1/episodes/:id', (req, res) => {
-    const findEpisodes = episodes.find((episodes) => {
-        return episodes.id == req.params.id
-    })
-    res.send(`<h1>${findEpisodes.name}</h1>`)
-})
-
-// returns an array of all episodes
-app.get('/api/v1/episodes', (req, res) => {
-    const episodesHtmlArray = episodes.map((episodes) => {
-        return `<li>${episodes.id}. (${episodes.name})</li>`
-    })
-    res.send(episodesHtmlArray.join(''))
-})
-
-//returns a list of all characters
-app.get('/api/v1/characters', (req, res) => {
-    const charactersHtmlArray = episodes.map((episodes) => {
-        return `<li>${episodes.id}. (${episodes.characters})</li>`
-    })
-    res.send(charactersHtmlArray).join('');
-})
-
-//returns details for 1 episode, including details for characters instead of just ids. 
-// If the episode does not exist, return a 404 error with a message
-app.get('/api/v1/characters/:id', (req, res) => {
-    const findCharactersArray = episodes.map((episodes) => {
-        return `<li>${episodes.id}:${episodes.characters}----(${episodes.synopsis})</li>`
-    })
-    if (findCharactersArray) {
-        res.json(findCharactersArray)
-    } else {
-        res.status(404)
-        res.json({ error: 'Not Found' })
-    }
-})
+app.get('*', function(req, res, next) {
+  const err = new Error();
+  err.status = 404;
+  next(err);
+});
 
 
+app.use(function(err, req, res, next) {
+  if (err.status === 404) {
+    const data = {
+      title: '404 Not Found',
+      content: 'Oops, page not found!',
+    };
+    res.status(404).json(data);
+  } else if (err.status === 405) {
+    res.status(405).json({
+      title: '405 Not Allowed',
+      content: 'Method not Allowed',
+    });
+    res.status(404).json(data);
+  } else {
+    return next();
+  }
+});
 
-//port listening
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`listening on ${port}.....`)
+
+process.on('uncaughtException', (err) => {
+  console.error(err && err.stack);
+});
+
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Server started');
 });
