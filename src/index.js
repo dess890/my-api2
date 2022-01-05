@@ -6,7 +6,9 @@ const path = require('path');
 const router = express.Router();
 const episode = require('./router/episode');
 const character = require('./router/character');
-const middleRouter = [episode, character];
+const episodeID = require('./router/ep-id');
+const characterID = require('./router/char-id');
+const middleRouter = [episode, character, episodeID, characterID];
 
 app.use(bodyParser.json()); // => for JSON data analyis
 app.use(helmet());// => for safety
